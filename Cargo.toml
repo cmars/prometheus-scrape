@@ -1,0 +1,9 @@
+[package]
+name = "prometheus_format"
+version = "0.1.0"
+authors = ["Casey Marshall <git@cmars.tech>"]
+
+[dependencies]
+chrono = "0.4"
+lazy_static = "1.2.0"
+regex = "1"
