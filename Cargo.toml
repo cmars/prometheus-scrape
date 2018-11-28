@@ -2,6 +2,10 @@
 name = "prometheus-scrape"
 version = "0.1.0"
 authors = ["Casey Marshall <git@cmars.tech>"]
+description = "Rust parser for the Prometheus exposition text format"
+keywords = ["prometheus", "metrics"]
+categories = ["parser-implementations", "encoding"]
+license = "Apache-2.0"
 
 [dependencies]
 chrono = "0.4"
