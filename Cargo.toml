@@ -1,5 +1,5 @@
 [package]
-name = "prometheus_format"
+name = "prometheus-scrape"
 version = "0.1.0"
 authors = ["Casey Marshall <git@cmars.tech>"]
 
