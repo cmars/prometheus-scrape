@@ -8,6 +8,10 @@ categories = ["parser-implementations", "encoding"]
 license = "Apache-2.0"
 
 [dependencies]
-chrono = "0.4"
+chrono = "0.4.6"
 lazy_static = "1.2.0"
 regex = "1"
+
+[replace]
+"chrono:0.4.6" = { git = 'https://github.com/cmars/chrono', branch = 'negative_timestamp_millis' }
+
