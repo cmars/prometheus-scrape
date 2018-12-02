@@ -15,7 +15,7 @@ lazy_static! {
     static ref HELP_RE: Regex = Regex::new(r"^#\s+HELP\s+(\w+)\s+(.+)$").unwrap();
     static ref TYPE_RE: Regex = Regex::new(r"^#\s+TYPE\s+(\w+)\s+(\w+)").unwrap();
     static ref SAMPLE_RE: Regex = Regex::new(
-        r"^(?P<name>\w+)(\{(?P<labels>[^}]+)\})?\s+(?P<value>\w+)(\s+(?P<timestamp>\d+))?"
+        r"^(?P<name>\w+)(\{(?P<labels>[^}]+)\})?\s+(?P<value>\S+)(\s+(?P<timestamp>\S+))?"
     )
     .unwrap();
 }
@@ -132,7 +132,7 @@ fn parse_bucket(s: &str, label: &str) -> Option<f64> {
         let kvpair = kv.split("=").collect::<Vec<_>>();
         let (k, v) = (kvpair[0], kvpair[1].trim_matches('"'));
         if k == label {
-            match v.parse::<f64>() {
+            match parse_golang_float(v) {
                 Ok(v) => Some(v),
                 Err(_) => None,
             }
@@ -209,6 +209,13 @@ pub struct Scrape {
     samples: Vec<Sample>,
 }
 
+fn parse_golang_float(s: &str) -> Result<f64, <f64 as std::str::FromStr>::Err> {
+    match s.to_lowercase().as_str() {
+        "nan" => Ok(std::f64::NAN), // f64::parse doesn't recognize 'nan'
+        ref s => s.parse::<f64>(),  // f64::parse expects lowercase [+-]inf
+    }
+}
+
 impl Scrape {
     pub fn parse(lines: impl Iterator<Item = io::Result<String>>) -> io::Result<Scrape> {
         Scrape::parse_at(lines, Utc::now())
@@ -247,7 +254,7 @@ impl Scrape {
                     timestamp,
                 } => {
                     // Parse value or skip
-                    let fvalue = if let Ok(v) = value.parse::<f64>() {
+                    let fvalue = if let Ok(v) = parse_golang_float(value) {
                         v
                     } else {
                         continue;
@@ -326,6 +333,15 @@ mod tests {
                 value: "2",
                 labels: None,
                 timestamp: None,
+            }
+        );
+        assert_eq!(
+            LineInfo::parse("foo wtf -1"),
+            LineInfo::Sample {
+                metric_name: "foo",
+                value: "wtf",
+                labels: None,
+                timestamp: Some("-1"),
             }
         );
         assert_eq!(LineInfo::parse("foo=2"), LineInfo::Ignored,);
@@ -407,7 +423,26 @@ mod tests {
                     .collect()
             )
         );
+        assert_eq!(
+            Labels::parse(r#"foo="foo bar",baz="baz quux""#),
+            Labels(
+                [("foo", "foo bar"), ("baz", "baz quux")]
+                    .iter()
+                    .map(pair_to_string)
+                    .collect()
+            )
+        );
         assert_eq!(Labels::parse("==="), Labels(HashMap::new()),);
+    }
+
+    #[test]
+    fn test_golang_float() {
+        assert_eq!(parse_golang_float("1.0"), Ok(1.0f64));
+        assert_eq!(parse_golang_float("-1.0"), Ok(-1.0f64));
+        assert!(parse_golang_float("NaN").unwrap().is_nan());
+        assert_eq!(parse_golang_float("Inf"), Ok(std::f64::INFINITY));
+        assert_eq!(parse_golang_float("+Inf"), Ok(std::f64::INFINITY));
+        assert_eq!(parse_golang_float("-Inf"), Ok(std::f64::NEG_INFINITY));
     }
 
     #[test]
