@@ -177,6 +177,9 @@ impl Labels {
         }
         Labels(l)
     }
+    pub fn get(&self, name: &str) -> Option<&str> {
+        self.0.get(name).map(|ref x| x.as_str())
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -205,8 +208,8 @@ impl Value {
 
 #[derive(Debug)]
 pub struct Scrape {
-    docs: HashMap<String, String>,
-    samples: Vec<Sample>,
+    pub docs: HashMap<String, String>,
+    pub samples: Vec<Sample>,
 }
 
 fn parse_golang_float(s: &str) -> Result<f64, <f64 as std::str::FromStr>::Err> {
@@ -487,7 +490,43 @@ rpc_duration_seconds_count 2693
 "#;
         let br = io::BufReader::new(scrape.as_bytes());
         let s = Scrape::parse(br.lines()).unwrap();
-        println!("{:?}", s);
         assert_eq!(s.samples.len(), 11);
+
+        fn assert_match_sample<'a, F>(samples: &'a Vec<Sample>, f: F) -> &'a Sample
+        where
+            for<'r> F: FnMut(&'r &'a Sample) -> bool,
+        {
+            samples.iter().filter(f).next().as_ref().unwrap()
+        }
+        assert_eq!(
+            assert_match_sample(&s.samples, |s| s.metric == "http_requests_total"
+                && s.labels.get("code") == Some("200")),
+            &Sample {
+                metric: "http_requests_total".to_string(),
+                value: Value::Counter(1027f64),
+                labels: Labels(
+                    [("method", "post"), ("code", "200")]
+                        .iter()
+                        .map(pair_to_string)
+                        .collect()
+                ),
+                timestamp: Utc.timestamp_millis(1395066363000),
+            }
+        );
+        assert_eq!(
+            assert_match_sample(&s.samples, |s| s.metric == "http_requests_total"
+                && s.labels.get("code") == Some("400")),
+            &Sample {
+                metric: "http_requests_total".to_string(),
+                value: Value::Counter(3f64),
+                labels: Labels(
+                    [("method", "post"), ("code", "400")]
+                        .iter()
+                        .map(pair_to_string)
+                        .collect()
+                ),
+                timestamp: Utc.timestamp_millis(1395066363000),
+            }
+        );
     }
 }
