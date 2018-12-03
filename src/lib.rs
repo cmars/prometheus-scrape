@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::io;
-use std::io::BufRead;
 
 extern crate chrono;
 use chrono::{DateTime, TimeZone, Utc};
@@ -326,6 +325,7 @@ impl Scrape {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::BufRead;
 
     #[test]
     fn test_lineinfo_parse() {
