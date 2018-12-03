@@ -1,6 +1,6 @@
 [package]
 name = "prometheus-scrape"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Casey Marshall <git@cmars.tech>"]
 description = "Rust parser for the Prometheus exposition text format"
 keywords = ["prometheus", "metrics"]
